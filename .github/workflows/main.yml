@@ -3,10 +3,14 @@ name: Deploy to Amazon EKS
 on:
   workflow_dispatch:
    inputs:
-    environment:
-     type: environment
-     required: true
-     description: "Select Environment"
+    type: choice
+    required: true
+    description: "Select Environment"
+    options:
+     - dev
+     - test
+     - staging
+     - production
 
 
 env:
