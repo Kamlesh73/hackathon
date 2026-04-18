@@ -6,17 +6,35 @@ on:
   pull_request:
     branches: main
 
-jobs:
+permissions:
+  packages: write
+  contents: read
+  attestations: write
+  id-token: write
 
+jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Check out the repo
+      uses: actions/checkout@v5
     - name: steup node js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 24.15.0
         cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npm test
+      run: npm ci
+      run: npm run build --if-present
+      run: npm test
+          
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile_apponitment
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}      
