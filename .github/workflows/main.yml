@@ -64,7 +64,6 @@ jobs:
 
   deploy:
     name: Deploy Application
-    needs: build
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
