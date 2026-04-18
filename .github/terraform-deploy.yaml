@@ -20,7 +20,9 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::3002894758:role/GitHubActionsTerraformRole
           aws-region: us-east-1
-
+      
+      - name: Terraform initialize
+        run: terraform init
       - name: Terraform Format
         run: terraform fmt
       - name: Terraform validattion
