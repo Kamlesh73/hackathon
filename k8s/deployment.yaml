@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appoinment-app
+spec:
+  selector:
+    matchLabels:
+      app: appointment-app
+  replicas: 2 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: appointment-app
+    spec:
+      containers:
+      - name: appointment-app
+        image: appointment:1.0.0
+        ports:
+        - containerPort: 3001
