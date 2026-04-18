@@ -32,7 +32,9 @@ jobs:
         node-version: 24.15.0
        # cache: 'npm'
     - name: run npm build
-      run: npm install
+      run: |
+         npm init -y
+         npm install
 
     - name: Set short git commit SHA
       id: commit
