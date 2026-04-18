@@ -9,10 +9,10 @@ on:
   
 
 
-env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+#env:
+#  AWS_REGION: ${{ vars.AWS_REGION }}
+#  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+#  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
 
 permissions:
   id-token: write
