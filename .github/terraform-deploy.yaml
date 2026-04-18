@@ -1,0 +1,33 @@
+name: Terraform CI/CD
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::3002894758:role/GitHubActionsTerraformRole
+          aws-region: us-east-1
+
+      - name: Terraform Format
+        run: terraform fmt
+      - name: Terraform validattion
+        run: terraform validate
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan
+      - name: Terraform deploy
+        id: plan
+        run: terraform apply 
