@@ -1,23 +1,28 @@
-name: Docker Build Image CI
+name: Deploy to Amazon EKS
 
 on:
   push:
-    branches: main
-  pull_request:
-    branches: main
+    branches:
+    - master
+    - main
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
 
 permissions:
-  packages: write
-  contents: read
-  attestations: write
   id-token: write
+  contents: read
 
 jobs:
   build:
+    name: Build Image
     runs-on: ubuntu-latest
     steps:
-    - name: Check out the repo
-      uses: actions/checkout@v5
+    - name: Checkout
+      uses: actions/checkout@v3
+
     - name: steup node js
       uses: actions/setup-node@v4
       with:
@@ -25,16 +30,71 @@ jobs:
         cache: 'npm'
       run: npm ci
       run: npm run build --if-present
-      run: npm test
-          
+      run: npm test      
+
+    - name: Set short git commit SHA
+      id: commit
+      uses: prompt/actions-commit-hash@v2
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-    - name: Build and push Docker image
-        id: push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile_apponitment
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}      
+      
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ steps.commit.outputs.short || 'latest' }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG        
+    - name: End Build
+      run: echo "Build Success"
+
+  deploy:
+    name: Deploy Application
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set short git commit SHA
+      id: commit
+      uses: prompt/actions-commit-hash@v2
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Update kube config
+      run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+
+    - name: Deploy to EKS
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}        
+        IMAGE_TAG: ${{ steps.commit.outputs.short || 'latest' }}
+      run: |
+        sed -i "s|DOCKER_IMAGE|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" manifests/deployment.yaml && \
+        kubectl apply -f manifests/deployment.yaml
+        kubectl apply -f manifests/service.yaml
+        kubectl apply -f manifests/ingress.yaml        
+
+
