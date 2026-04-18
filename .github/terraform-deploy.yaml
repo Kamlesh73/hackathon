@@ -3,13 +3,20 @@ on:
   push:
     branches: [main]
 
+    workflow_dispatch:
+      inputs:
+      environment:
+      description: 'Select the environment to deploy to'
+      required: true
+      default: 'dev' 
+
 permissions:
   id-token: write
   contents: read
   pull-requests: write
 
 jobs:
-  terraform:
+  terraform-plan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,7 +36,22 @@ jobs:
         run: terraform validate
       - name: Terraform Plan
         id: plan
-        run: terraform plan
+        run: terraform plan -out=tfplan
+
+  terraform-deploy:
+    runs-on: ubuntu-latest
+    need: terraform-plan
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::3002894758:role/GitHubActionsTerraformRole
+          aws-region: us-west-2
+      
       - name: Terraform deploy
-        id: plan
-        run: terraform apply 
+        id: deploy
+        run: terraform apply tfplan
